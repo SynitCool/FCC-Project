@@ -2,39 +2,64 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from pandas.plotting import register_matplotlib_converters
+
 register_matplotlib_converters()
 
 # Import data (Make sure to parse dates. Consider setting index column to 'date'.)
-df = None
+df = pd.read_csv("fcc-forum-pageviews.csv", index_col="date", parse_dates=True)
 
 # Clean data
-df = None
+df = df.drop(index=df[(df["value"] < df["value"].quantile(0.025)) |
+                      (df["value"] > df["value"].quantile(0.975))].index)
 
 
 def draw_line_plot():
     # Draw line plot
+    fig, ax = plt.subplots()
+    fig.set_figheight(6)
+    fig.set_figwidth(14)
 
-
-
-
+    ax.plot(df.index, df["value"], linestyle='solid', marker=None, color='red')
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Page Views")
+    ax.set_title("Daily freeCodeCamp Forum Page Views 5/2016-12/2019")
 
     # Save image and return fig (don't change this part)
     fig.savefig('line_plot.png')
     return fig
 
+
 def draw_bar_plot():
     # Copy and modify data for monthly bar plot
-    df_bar = None
+    df_bar = df.copy()
+    df_bar["month"] = df_bar.index.month_name()
+    df_bar["year"] = df_bar.index.year
+    group_df_bar = df_bar.groupby(["year", "month"])["value"].mean().unstack()
 
     # Draw bar plot
+    fig = sns.catplot(
+        data=df_bar,
+        x="year",
+        y="value",
+        kind="bar",
+        hue="month",
+        ci=None,
+        palette="tab10",
+        hue_order=["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+                   "November", "December"],
+        legend=False,
+        height=6)
 
-
-
-
+    fig.set_ylabels("Average Page Views")
+    fig.set_xlabels("Years")
+    plt.xticks(rotation=90)
+    plt.legend(loc="upper left", title="Months")
+    plt.tight_layout()
 
     # Save image and return fig (don't change this part)
     fig.savefig('bar_plot.png')
     return fig
+
 
 def draw_box_plot():
     # Prepare data for box plots (this part is done!)
@@ -45,9 +70,23 @@ def draw_box_plot():
 
     # Draw box plots (using Seaborn)
 
+    order_month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
+    df_box.sort_values(by="year", ascending=False, inplace=True)
+    df_box["month"] = pd.CategoricalIndex(df_box["month"], categories=order_month, ordered=True)
 
-
+    g = sns.PairGrid(data=df_box, y_vars="value", x_vars=["year", "month"])
+    g.map(sns.boxplot)
+    fig = g.fig
+    fig.set_figheight(6)
+    fig.set_figwidth(16)
+    fig.axes[0].set_ylabel("Page Views")
+    fig.axes[1].set_ylabel("Page Views")
+    fig.axes[0].set_xlabel("Year")
+    fig.axes[1].set_xlabel("Month")
+    fig.axes[0].set_title("Year-wise Box Plot (Trend)")
+    fig.axes[1].set_title("Month-wise Box Plot (Seasonality)")
+    plt.tight_layout()
 
     # Save image and return fig (don't change this part)
     fig.savefig('box_plot.png')
